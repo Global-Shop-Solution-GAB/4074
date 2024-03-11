@@ -1,0 +1,86 @@
+Program.Sub.ScreenSU.Start
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.sQuery.Declare(String)
+V.Local.sWidth.Declare(String)
+V.Local.sTitles.Declare(String)
+V.Local.sReturn.Declare(String)
+V.Local.sTemp.Declare(String)
+
+F.Intrinsic.Control.If(V.Caller.Hook,=,17381)
+	V.Passed.009013.Set("Desc/Alt Desc/Part No")
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndIf
+
+'syncronous
+F.Intrinsic.Control.If(V.Caller.Hook,=,17384)
+	F.ODBC.Connection!conX.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+	F.Intrinsic.String.Split("DESCRIPTION*!*ALT DESCRIPTION*!*PART    REV*!*CUSTOMER*!*CUST PART NO*!*MFG PART*!*MFG NAME*!*COST*!*LEAD TIME*!*PRODUCT LINE*!*SORT CODE","*!*",V.Local.sTitles)
+	F.Intrinsic.String.Split("2800*!*2500*!*1800*!*1000*!*1500*!*1500*!*1500*!*800*!*900*!*1200*!*1200","*!*",V.Local.swidth)
+	'need to join inventory master, inv_cross_ref, inventory mst2
+	V.Local.sQuery.Set("SELECT INVENTORY_MSTR.DESCRIPTION, INVENTORY_MST2.DESCRIPTION_2, INVENTORY_MSTR.PART, INV_CROSS_REF.CUSTOMER, INV_CROSS_REF.CUSTOMER_PART, INV_CROSS_REF.MFG_PART, INV_CROSS_REF.MFG_NAME,INVENTORY_MSTR.AMT_COST, INVENTORY_MSTR.TIME_MATERIAL_LEAD, INVENTORY_MSTR.PRODUCT_LINE, INVENTORY_MSTR.CODE_SORT FROM INVENTORY_MSTR JOIN (INVENTORY_MST2 JOIN INV_CROSS_REF ON INVENTORY_MST2.PART = INV_CROSS_REF.PART) ON INVENTORY_MSTR.PART = INVENTORY_MST2.PART ORDER BY INVENTORY_MSTR.DESCRIPTION, INVENTORY_MST2.DESCRIPTION_2, INVENTORY_MSTR.PART")
+
+	F.Intrinsic.UI.SetBrowserHotTypeAhead(True)
+	F.Intrinsic.UI.SetBrowserOOT(True)
+	F.Intrinsic.UI.Browser("Select Part","conx",V.Local.squery,V.Local.sTitles,V.Local.sWidth,17800,8000,V.Local.sReturn)
+
+	F.Intrinsic.Control.If(V.Local.sReturn,<>,"***CANCEL***")
+		F.Intrinsic.string.Split(V.Local.sReturn,"*!*",V.Local.sReturn)
+		'part
+		V.Passed.009020.Set(V.Local.sReturn(2))
+		'009021 is the location field
+	F.Intrinsic.Control.EndIf
+
+	F.ODBC.Connection!conX.Close
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: ATG_4074_INVENTORY_BWSR_OVR.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+
+Program.Sub.Main.End
+
+Program.Sub.Comments.Start
+${$0$}$ATG_INVENTORY_BWSR_OVR$}$MEK$}$3/29/2012
+${$1$}$$}$$}$1$}$17384$}$Custom Selection Hook - OBSOLETE$}$5/23/2016 8:03:42 AM$}$(Program: INV010P; Screen: INS010P)
+
+${$1$}$$}$$}$0$}$17381$}$Populate Hook - OBSOLETE$}$5/23/2016 8:03:04 AM$}$(Program: INV010P; Screen: INS010P)
+
+${$3$}$0$}$$}$-1$}$-1$}$$}$1/1/1900$}$When the Part Number Lookup screen is launched (hook 17381), a new option will be added to the dropdown list called "Desc/Alt Desc/Part No". (This is done by setting passed variable 009013 to the new item text.) When this option is  selected and the search button is clicked, a custom hook (17384) will fire. A GAB script will launch a new browser which will include the following fields in this order:
+
+Part Description
+Alt Description 1
+Part Number
+Rev
+Customer
+Customer Part Number
+Mfg Part
+Mfg Name
+Cost
+Lead Time
+Product Line
+Sort Code
+
+If a part number is selected, the passed variable 008000 will be set to the data of the selected part which will be loaded back into the main inventory parts screen. If no part is selected, program control will return to the INV010P screen.
+
+Note: To view this screen, the user must turn on the option to Use Part Cross Reference in Company Options (Advanced) > Inventory.
+
+Note: INV010P may become obsolete in Global Shop version 2012.
+Program.Sub.Comments.End
+
